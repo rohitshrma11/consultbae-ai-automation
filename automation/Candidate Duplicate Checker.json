@@ -1,0 +1,198 @@
+{
+  "name": "Candidate Duplicate Checker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "candidate-check",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4d9c5efd-3d6e-4832-bffd-6642512f6e8c",
+      "name": "Webhook",
+      "webhookId": "7eacc8c3-c943-4600-b2db-92d42391884a"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst item = $input.first();\nconst body = item.json.body || {};\n\n// Name clean\nconst name = String(body.name || \"\")\n  .trim()\n  .toLowerCase()\n  .replace(/\\b\\w/g, c => c.toUpperCase());\n\n// Email clean\nconst email = String(body.email || \"\")\n  .trim()\n  .toLowerCase();\n\n// Phone clean\nlet phone = String(body.phone || \"\")\n  .replace(/\\D/g, \"\");\n\nif (phone.length === 12 && phone.startsWith(\"91\")) {\n  phone = phone.substring(2);\n}\n\nif (phone.length > 10) {\n  phone = phone.slice(-10);\n}\n\n// City clean\nconst cityRaw = String(body.city || \"\")\n  .trim()\n  .toLowerCase();\n\nconst cityMapping = {\n  \"gurgaon\": \"Gurugram\",\n  \"gurugram\": \"Gurugram\",\n  \"bangalore\": \"Bengaluru\",\n  \"bengaluru\": \"Bengaluru\",\n  \"new delhi\": \"Delhi\",\n  \"delhi ncr\": \"Delhi\",\n  \"delhi\": \"Delhi\",\n  \"noida\": \"Noida\",\n  \"pune\": \"Pune\"\n};\n\nconst city =\n  cityMapping[cityRaw] ||\n  cityRaw.replace(/\\b\\w/g, c => c.toUpperCase());\n\nreturn [\n  {\n    json: {\n      name: name,\n      email: email,\n      phone: phone,\n      city: city\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "22eb84f6-9d9c-4978-aea1-653951198024",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/check-duplicate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=name",
+              "value": "={{$json.name}}"
+            },
+            {
+              "name": "email",
+              "value": "={{$json.email}}"
+            },
+            {
+              "name": "phone",
+              "value": "={{$json.phone}}"
+            },
+            {
+              "name": "city",
+              "value": "={{$json.city}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "6560b9a7-d344-4b26-bb93-c86200d8c79c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "571642e5-7e0b-4755-87c0-42d122fe339b",
+              "leftValue": "={{$json.duplicate}}",
+              "rightValue": "={{$json.duplicate}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "1e9c7592-6b06-406c-b7a8-8da151e86724",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        816,
+        -32
+      ],
+      "id": "74556fa9-b144-4dde-9df5-7e1b23e5f053",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"duplicate\": false,\n  \"message\": \"New candidate - no duplicate found\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        96
+      ],
+      "id": "3114e9a0-17b2-409a-b953-202623b3f231",
+      "name": "Respond to Webhook1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2b6427d5-f2ae-4c38-a0c0-626d19d78d33",
+  "meta": {
+    "instanceId": "612c6aa86ddafb5c9fa1461b03ef7a6f431a2b39aa5f7108b9bc310351c65d32"
+  },
+  "id": "LQwQJpmmCvobDdFu",
+  "tags": []
+}
