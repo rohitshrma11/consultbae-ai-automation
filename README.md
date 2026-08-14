@@ -1,6 +1,4 @@
-## Task 4 - Data Quality Issues Report
 
-During ingestion and entity resolution, multiple data quality issues were identified across the three source files.
 
 ### 1. Inconsistent phone number formats
 
